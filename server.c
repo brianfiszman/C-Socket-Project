@@ -26,6 +26,7 @@ void chk_portno(int *argc)
 }
 
 void send_message(int* sockfd , char* buffer){
+		scanf("%s", buffer);
 		write(*sockfd, buffer, strlen(buffer));
 }
 
@@ -43,8 +44,13 @@ int main(int argc, char* argv[])
 	
 	sockfd = socket(PF_INET, SOCK_STREAM, 0);
 
-	if(connect(sockfd, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) >= 0)	send_message(&sockfd, buffer);
-	
+	if(connect(sockfd, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) >= 0)	
+	while(1)
+	{
+		send_message(&sockfd, buffer);
+		memset(buffer, 0, MAX_BUF);
+		read(sockfd, buffer, MAX_BUF);	
+	}
 	return 0;
 }
 
