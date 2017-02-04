@@ -7,6 +7,8 @@
 #include <netinet/in.h>
 #include <string.h>
 
+#define FILE "/dev/tty"
+
 #define MAX_BUF 1024
 
 void error(char *err_msg)
@@ -33,7 +35,7 @@ void send_message(int* sockfd , char* buffer){
 int main(int argc, char* argv[])
 {
 	int sockfd;
-	char buffer[MAX_BUF] = "hello";
+	char buffer[MAX_BUF];
 	struct sockaddr_in serv_addr;
 	
 	chk_portno(&argc);
@@ -43,13 +45,25 @@ int main(int argc, char* argv[])
 	serv_addr.sin_addr.s_addr = INADDR_ANY;
 	
 	sockfd = socket(PF_INET, SOCK_STREAM, 0);
-
-	if(connect(sockfd, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) >= 0)	
+	
 	while(1)
 	{
-		send_message(&sockfd, buffer);
-		memset(buffer, 0, MAX_BUF);
-		read(sockfd, buffer, MAX_BUF);	
+		// Intento conectarme a un servidor que este escuchando conexiones.
+		if(connect(sockfd, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) >= 0)
+		{	
+			while(1)
+			{
+				// Si lo logro empezamos la comunicacion :D
+				send_message(&sockfd, buffer);
+				memset(buffer, 0, MAX_BUF);
+				read(sockfd, buffer, MAX_BUF);	
+			}
+		}
+		else
+		{
+			// Si el cliente no logra contectarse, espera 5 segundos y vuelve a intentar	
+			sleep(5);
+		}
 	}
 	return 0;
 }
