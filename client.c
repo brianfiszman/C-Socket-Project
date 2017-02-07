@@ -28,10 +28,10 @@ int chk_portno(int *argc)
 	return 0;
 }
 
-void send_message(int* sockfd , char* buffer)
+int send_message(int* sockfd , char buffer[MAX_BUF])
 {
 		scanf("%s", buffer);
-		write(*sockfd, buffer, strlen(buffer));
+		return send(*sockfd, buffer, strlen(buffer), MSG_EOR|MSG_NOSIGNAL);
 }
 
 int create_socket()
@@ -49,32 +49,44 @@ struct sockaddr_in create_serv_addr(char* argv[])
     return serv_addr;
 }
 
+int reconnect(int sockfd)
+{
+    close(sockfd);
+    sockfd = create_socket();
+    return sockfd;
+}
+
 int main(int argc, char* argv[])
 {
     chk_portno(&argc);
     char buffer[MAX_BUF];
-
 	int sockfd = create_socket();
     struct sockaddr_in serv_addr = create_serv_addr(argv);
+
     //TODO  Necesito crear un thread que separe el envio y recepcion de mensajes 
 	while(1)
 	{
-		// Intento conectarme a un servidor que este escuchando conexiones.
+	    // Intento conectarme a un servidor que este escuchando conexiones.
 		if(connect(sockfd, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) >= 0)
 		{
 			while(1)
 			{
-				// Si lo logro empezamos la comunicacion :D
-				send_message(&sockfd, buffer);
+			//  Si lo logro empezamos la comunicacion :D
 				memset(buffer, 0, MAX_BUF);
-				read(sockfd, buffer, MAX_BUF);
+                send_message(&sockfd, buffer);
+				if (read(sockfd, buffer, MAX_BUF) < 1)
+                {
+                    sockfd = reconnect(sockfd);
+                    break;
+				}
 			}
-		}
+   		}
 		else
 		{
-			// Si el cliente no logra contectarse, espera 5 segundos y vuelve a intentar
-			sleep(5);
+		//  Si el cliente no logra contectarse, espera 5 segundos y vuelve a intentar
+	    	sleep(5);
 		}
 	}
+    return 0;
 }
 
