@@ -21,8 +21,8 @@ int chk_argno(int *argc)
 {
 	if (*argc < 3)
 	{
-		error((char*)"ERROR: indicate the server address and the port number!");
-		exit(1);
+	    error((char*)"ERROR: indicate the server address and the port number!");
+    	    exit(1);
 	}
 
 	return 0;
@@ -30,8 +30,8 @@ int chk_argno(int *argc)
 
 int send_message(int* sockfd , char buffer[MAX_BUF])
 {
-		scanf("%s", buffer);
-		return send(*sockfd, buffer, strlen(buffer), MSG_EOR|MSG_NOSIGNAL);
+    scanf("%s", buffer);
+    return send(*sockfd, buffer, strlen(buffer), MSG_EOR|MSG_NOSIGNAL);
 }
 
 int create_socket()
@@ -41,11 +41,11 @@ int create_socket()
 
 struct sockaddr_in create_serv_addr(char* argv[])
 {
-	struct sockaddr_in serv_addr;
+    struct sockaddr_in serv_addr;
     struct hostent *server = gethostbyname(argv[1]);
    	
     serv_addr.sin_port = htons(atoi(argv[2]));
-	serv_addr.sin_family = AF_INET;
+    serv_addr.sin_family = AF_INET;
     bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
     return serv_addr;
 }
