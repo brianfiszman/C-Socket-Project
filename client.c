@@ -19,18 +19,10 @@ void error(char* err_msg)
 // This function checks if a port was selected in the argc
 int chk_argno(int* argc)
 {
-<<<<<<< HEAD
     if (*argc < 3) {
         error((char*)"ERROR: indicate the server address and the port number!");
         exit(1);
     }
-=======
-	if (*argc < 3)
-	{
-	    error((char*)"ERROR: indicate the server address and the port number!");
-    	    exit(1);
-	}
->>>>>>> c79d6657643fa9a55d9c90fe5bce48f9c68ff7b0
 
     return 0;
 }
@@ -38,11 +30,7 @@ int chk_argno(int* argc)
 int send_message(int* sockfd, char buffer[MAX_BUF])
 {
     scanf("%s", buffer);
-<<<<<<< HEAD
     return send(*sockfd, buffer, strlen(buffer), MSG_EOR | MSG_NOSIGNAL);
-=======
-    return send(*sockfd, buffer, strlen(buffer), MSG_EOR|MSG_NOSIGNAL);
->>>>>>> c79d6657643fa9a55d9c90fe5bce48f9c68ff7b0
 }
 
 int create_socket() { return socket(PF_INET, SOCK_STREAM, IPPROTO_TCP); }
@@ -50,7 +38,6 @@ int create_socket() { return socket(PF_INET, SOCK_STREAM, IPPROTO_TCP); }
 struct sockaddr_in create_serv_addr(char* argv[])
 {
     struct sockaddr_in serv_addr;
-<<<<<<< HEAD
     struct hostent* server;
     server = gethostbyname(argv[1]);
     memset(&serv_addr, 0, sizeof(serv_addr));
@@ -59,13 +46,6 @@ struct sockaddr_in create_serv_addr(char* argv[])
     serv_addr.sin_addr.s_addr = INADDR_ANY;
     bcopy((char*)server->h_addr, (char*)&serv_addr.sin_addr.s_addr,
         server->h_length);
-=======
-    struct hostent *server = gethostbyname(argv[1]);
-   	
-    serv_addr.sin_port = htons(atoi(argv[2]));
-    serv_addr.sin_family = AF_INET;
-    bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
->>>>>>> c79d6657643fa9a55d9c90fe5bce48f9c68ff7b0
     return serv_addr;
 }
 
