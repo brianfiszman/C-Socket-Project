@@ -10,7 +10,6 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <termios.h>
 #include <unistd.h>
 
 #define SHELL "/bin/bash"
@@ -46,8 +45,7 @@ struct sockaddr_in create_serv_addr(char* argv[])
 {
     struct sockaddr_in serv_addr;
 
-    memset(
-        &serv_addr, 0, sizeof(serv_addr)); // Initialize serv_addr with zeroes
+    memset(&serv_addr, 0, sizeof(serv_addr)); // Initialize serv_addr with zeroes
 
     serv_addr.sin_family = AF_INET;                 // Domain
     serv_addr.sin_port = htons(atoi(argv[2]));      // Port
